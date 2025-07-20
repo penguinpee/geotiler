@@ -36,8 +36,10 @@ from geotiler.map import Tile
 from geotiler.cache import caching_downloader, redis_downloader
 
 from unittest import mock
+import pytest
 
-def test_redis_downloader_and_cache():
+@pytest.mark.asyncio
+async def test_redis_downloader_and_cache():
     """
     Test Redis downloader and cache functions.
     """
@@ -57,9 +59,8 @@ def test_redis_downloader_and_cache():
     urls = ['url1', 'url2', 'url3']
     tiles = [Tile(url, None, None, None) for url in urls]
 
-    loop = asyncio.get_event_loop()
     tiles = downloader(tiles, 2)
-    result = loop.run_until_complete(as_list(tiles))
+    result = await as_list(tiles)
 
     args = [v[0][0] for v in client.get.call_args_list]
     assert ['url1', 'url2', 'url3'] == args

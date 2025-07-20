@@ -38,25 +38,8 @@ import geotiler.tile.img as tile_img
 
 from unittest import mock
 
+import pytest
 
-def _run_render_image(map, tiles):
-    """
-    Run coroutine rendering map image using the map tiles.
-
-    :param map: Map object.
-    :param tiles: Asynchronous generator of tiles.
-    """
-    loop = asyncio.get_event_loop()
-    task = tile_img.render_image(map, tiles)
-    image = loop.run_until_complete(task)
-    return image
-
-async def _tile_generator(offsets, data):
-    """
-    Create asynchronous generator of map tiles.
-    """
-    for o, i in zip(offsets, data):
-        yield Tile(None, o, i, None)
 
 def test_render_error_tile():
     """
@@ -88,45 +71,68 @@ def test_tile_image_jpg():
     img = tile_img._tile_image(f.getbuffer())
     assert (12, 10) == img.size
 
-def test_render_image():
-    """
-    Test rendering map image.
-    """
-    tile = PIL.Image.new('RGBA', (10, 10))
-    map = mock.MagicMock()
-    map.size = [30, 20]
-    map.provider.tile_width = 10
-    map.provider.tile_height = 10
+@pytest.mark.asyncio
+class render_image:
+    def __init__(self):
+        pass
 
-    with mock.patch('geotiler.tile.img._tile_image') as tf, \
-            mock.patch.object(PIL.Image, 'new') as img_new:
+    async def _run_render_image(self, map, tiles):
+        """
+        Run coroutine rendering map image using the map tiles.
 
-        tf.return_value = tile
-        data = (tile, tile, tile, tile)
-        offsets = ((0, 0), (10, 0), (20, 0), (0, 10))
-        tiles = _tile_generator(offsets, data)
-        image = _run_render_image(map, tiles)
-        img_new.assert_called_once_with('RGBA', (30, 20))
-        assert 4 == tf.call_count
-        tf.assert_called_with(tile)
+        :param map: Map object.
+        :param tiles: Asynchronous generator of tiles.
+        """
+        task = tile_img.render_image(self, map, tiles)
+        image = await task
+        return image
 
-def test_render_image_error():
-    """
-    Test rendering map image with error tile.
-    """
-    tile = PIL.Image.new('RGBA', (10, 10))
-    map = mock.MagicMock()
-    map.size = 30, 20
-    map.provider.tile_width = 10
-    map.provider.tile_height = 10
+    async def _tile_generator(offsets, data):
+        """
+        Create asynchronous generator of map tiles.
+        """
+        for o, i in zip(offsets, data):
+            yield Tile(None, o, i, None)
 
-    with mock.patch('geotiler.tile.img._tile_image') as tf:
-        tf.return_value = tile
-        data = (tile, tile, None, tile, None, tile)
-        offsets = ((0, 0), (10, 0), (20, 0), (0, 10), (10, 10), (20, 10))
-        tiles = _tile_generator(offsets, data)
-        image = _run_render_image(map, tiles)
-        assert 4 == tf.call_count
-        tf.assert_called_with(tile)
+    async def test_render_image():
+        """
+        Test rendering map image.
+        """
+        tile = PIL.Image.new('RGBA', (10, 10))
+        map = mock.MagicMock()
+        map.size = [30, 20]
+        map.provider.tile_width = 10
+        map.provider.tile_height = 10
+
+        with mock.patch('geotiler.tile.img._tile_image') as tf, \
+                mock.patch.object(PIL.Image, 'new') as img_new:
+
+            tf.return_value = tile
+            data = (tile, tile, tile, tile)
+            offsets = ((0, 0), (10, 0), (20, 0), (0, 10))
+            tiles = await render_image._tile_generator(offsets, data)
+            image = await render_image._run_render_image(map, tiles)
+            img_new.assert_called_once_with('RGBA', (30, 20))
+            assert 4 == tf.call_count
+            tf.assert_called_with(tile)
+
+    def test_render_image_error():
+        """
+        Test rendering map image with error tile.
+        """
+        tile = PIL.Image.new('RGBA', (10, 10))
+        map = mock.MagicMock()
+        map.size = 30, 20
+        map.provider.tile_width = 10
+        map.provider.tile_height = 10
+
+        with mock.patch('geotiler.tile.img._tile_image') as tf:
+            tf.return_value = tile
+            data = (tile, tile, None, tile, None, tile)
+            offsets = ((0, 0), (10, 0), (20, 0), (0, 10), (10, 10), (20, 10))
+            tiles = _tile_generator(offsets, data)
+            image = _run_render_image(map, tiles)
+            assert 4 == tf.call_count
+            tf.assert_called_with(tile)
 
 # vim: sw=4:et:ai
